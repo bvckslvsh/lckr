@@ -1,4 +1,5 @@
 import {
+  base64ToBuffer,
   createTestFile,
   decryptFile,
   deriveKey,
@@ -56,17 +57,24 @@ export function useLockerActions() {
 
   const openLocker = async (password: string) => {
     const handle = await pickDirectory();
-    const salt = await loadLockerMetadata(handle);
-    if (!salt) {
+    const lockerMetadata = await loadLockerMetadata(handle);
+
+    if (!lockerMetadata) {
       notify("Locker not found", "Please create a locker first.", "error");
       throw new Error("Locker metadata not found");
     }
+
+    const salt = new Uint8Array(base64ToBuffer(lockerMetadata.salt));
+
     const key = await deriveKey(password, salt);
+
     const isValid = await verifyKey(handle, key);
+
     if (!isValid) {
       notify("Oops!", "Invalid password or locker corrupted.", "error");
       throw new Error("Invalid password or locker corrupted.");
     }
+
     setLocker(key, salt, handle);
     navigate("/dashboard");
     notify("Opened!", "Locker opened successfully.", "success");
