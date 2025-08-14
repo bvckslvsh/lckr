@@ -19,18 +19,18 @@ import {
 } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-
+import { Progress } from "../ui/progress";
 type FileCardProps = {
   title: string;
   type: string;
   isEncrypted: boolean;
   isLoading?: boolean;
+  progress?: number;
   onDownload?: () => void;
   onEncrypt?: () => void;
   onDecrypt?: () => void;
   onDelete?: () => void;
 };
-
 function getIconByExtension(ext: string): LucideIcon {
   const extension = ext.toLowerCase();
   if (["txt", "md", "doc", "docx"].includes(extension)) return LetterText;
@@ -40,7 +40,6 @@ function getIconByExtension(ext: string): LucideIcon {
   if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) return FileArchive;
   return LetterText;
 }
-
 export default function FileCard({
   title,
   type,
@@ -50,9 +49,9 @@ export default function FileCard({
   isLoading,
   onDecrypt,
   onDelete,
+  progress,
 }: FileCardProps) {
   const FileIcon = getIconByExtension(type);
-
   return (
     <Card>
       <CardHeader>
@@ -62,54 +61,59 @@ export default function FileCard({
             {title}
           </span>
         </CardTitle>
-
-        <CardAction className="flex gap-2">
-          <Tooltip>
-            <TooltipTrigger>
-              <ArrowDownToLine
-                onClick={onDownload}
-                className="cursor-pointer"
-              />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Get file</p>
-            </TooltipContent>
-          </Tooltip>
-          {isLoading ? (
-            <Loader className="animate-spin text-muted-foreground" />
-          ) : (
-            <>
-              {isEncrypted ? (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <LockOpen onClick={onDecrypt} className="cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Decrypt file</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Lock onClick={onEncrypt} className="cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Encrypt file</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </>
-          )}
-
-          <Tooltip>
-            <TooltipTrigger>
-              <Trash onClick={onDelete} className="cursor-pointer" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Delete file</p>
-            </TooltipContent>
-          </Tooltip>
-        </CardAction>
+        {progress === undefined ? (
+          <CardAction className="flex gap-2">
+            <Tooltip>
+              <TooltipTrigger>
+                <ArrowDownToLine
+                  onClick={onDownload}
+                  className="cursor-pointer"
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Get file</p>
+              </TooltipContent>
+            </Tooltip>
+            {isLoading ? (
+              <Loader className="animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                {isEncrypted ? (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <LockOpen
+                        onClick={onDecrypt}
+                        className="cursor-pointer"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Decrypt file</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Lock onClick={onEncrypt} className="cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Encrypt file</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </>
+            )}
+            <Tooltip>
+              <TooltipTrigger>
+                <Trash onClick={onDelete} className="cursor-pointer" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete file</p>
+              </TooltipContent>
+            </Tooltip>
+          </CardAction>
+        ) : (
+          <Progress value={progress} className="w-full" />
+        )}
       </CardHeader>
       <CardFooter className="flex gap-1">
         <Badge variant={isEncrypted ? "accept" : "destructive"}>

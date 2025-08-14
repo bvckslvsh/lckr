@@ -1,11 +1,14 @@
 import React, { useCallback, useRef, useState } from "react";
 import { useLockerStore } from "@/store/lockerStore";
-import { encryptFile } from "@/utils/crypto";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLockerActions } from "@/hooks/useLockerActions";
+import { useNotification } from "@/notifications/NotificationProvider";
 
 export default function FileDropper() {
-  const { cryptoKey, directoryHandle, loadFiles } = useLockerStore();
+  const { cryptoKey, directoryHandle } = useLockerStore();
   const [isDragging, setIsDragging] = useState(false);
+  const { addFiles } = useLockerActions();
+  const { notify } = useNotification();
   const dropRef = useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -41,13 +44,31 @@ export default function FileDropper() {
       e.preventDefault();
       setIsDragging(false);
       if (!cryptoKey || !directoryHandle) return;
-      const files = Array.from(e.dataTransfer.files);
-      for (const file of files) {
-        await encryptFile(file, cryptoKey, directoryHandle, `${file.name}.enc`);
+
+      const files: File[] = [];
+      let hasFolder = false;
+
+      for (const item of e.dataTransfer.items) {
+        const entry = item.webkitGetAsEntry?.();
+        if (!entry) continue;
+
+        if (entry.isFile) {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        } else if (entry.isDirectory) {
+          hasFolder = true;
+        }
       }
-      await loadFiles();
+
+      if (hasFolder) {
+        notify("Folders not allowed", "Folders cannot be added!", "error");
+      }
+
+      if (files.length === 0) return;
+
+      await addFiles(files);
     },
-    [cryptoKey, directoryHandle, loadFiles]
+    [cryptoKey, directoryHandle, addFiles, notify]
   );
 
   return (

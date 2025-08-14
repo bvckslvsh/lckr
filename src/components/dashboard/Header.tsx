@@ -8,17 +8,18 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useLockerStore } from "@/store/lockerStore";
-import { encryptFile } from "@/utils/crypto";
 import { Button } from "../ui/button";
 import { FilePlus } from "lucide-react";
 import { Input } from "../ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useLockerActions } from "@/hooks/useLockerActions";
 
 export default function Header() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { filters, setFilters, cryptoKey, directoryHandle, loadFiles } =
-    useLockerStore();
+  const { filters, setFilters, cryptoKey, directoryHandle } = useLockerStore();
+
+  const { addFiles } = useLockerActions();
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
@@ -27,12 +28,8 @@ export default function Header() {
   const handleAddFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!cryptoKey || !directoryHandle || !files) return;
-
-    for (const file of files) {
-      await encryptFile(file, cryptoKey, directoryHandle, `${file.name}.enc`);
-    }
-
-    await loadFiles();
+    const fileArray = Array.from(files);
+    await addFiles(fileArray);
     event.target.value = "";
   };
 
