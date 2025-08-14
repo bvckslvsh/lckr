@@ -1,7 +1,3 @@
-# [LCKR](https://lckr.tech)
-
----
-
 **LCKR** is a zero-knowledge, client-side encryption tool designed to securely encrypt and store your files locally using modern web technologies. It ensures your data privacy by performing all cryptographic operations on the client side — no data ever leaves your device.
 
 ---
