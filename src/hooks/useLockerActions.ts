@@ -19,7 +19,14 @@ export function useLockerActions() {
   const setLocker = useLockerStore((state) => state.setLocker);
   const navigate = useNavigate();
   const { notify } = useNotification();
-  const { cryptoKey, directoryHandle, loadFiles } = useLockerStore();
+  const {
+    cryptoKey,
+    directoryHandle,
+    loadFiles,
+    setFileProgress,
+    lockerFiles,
+    setLockerFiles,
+  } = useLockerStore();
   const [loadingFileName, setLoadingFileName] = useState<string | null>(null);
 
   const pickDirectory = async (): Promise<FileSystemDirectoryHandle> => {
@@ -140,9 +147,62 @@ export function useLockerActions() {
 
   const handleDelete = async (file: LockerFile) => {
     if (!directoryHandle) return;
+    setFileProgress(file.name, 0);
+    for (let i = 0; i <= 100; i += 20) {
+      await new Promise((res) => setTimeout(res, 50));
+      setFileProgress(file.name, i);
+    }
     await directoryHandle.removeEntry(file.name);
     await loadFiles();
+    setFileProgress(file.name, undefined);
     notify("Deleted!", "File deleted successfully.", "success");
+  };
+
+  const addFiles = async (files: File[]) => {
+    if (!cryptoKey || !directoryHandle) return;
+
+    const tempFiles: { file: File; lockerFile: LockerFile }[] = files.map(
+      (file) => ({
+        file,
+        lockerFile: {
+          name: file.name,
+          originalName: file.name,
+          extension: file.name.split(".").pop() || "txt",
+          isEncrypted: true,
+        },
+      })
+    );
+
+    tempFiles.sort((a, b) =>
+      a.lockerFile.originalName
+        .toLowerCase()
+        .localeCompare(b.lockerFile.originalName.toLowerCase())
+    );
+
+    setLockerFiles([...lockerFiles, ...tempFiles.map((t) => t.lockerFile)]);
+
+    tempFiles.forEach((t) => setFileProgress(t.file.name, 0));
+
+    for (const t of tempFiles) {
+      await encryptFile(
+        t.file,
+        cryptoKey,
+        directoryHandle,
+        `${t.file.name}.enc`,
+        (p) => setFileProgress(t.file.name, p)
+      );
+      setFileProgress(t.file.name, undefined);
+    }
+
+    await loadFiles();
+
+    notify(
+      "Uploaded!",
+      files.length === 1
+        ? "File uploaded and encrypted successfully."
+        : "Files uploaded and encrypted successfully.",
+      "success"
+    );
   };
 
   return {
@@ -153,5 +213,6 @@ export function useLockerActions() {
     handleEncrypt,
     handleDecrypt,
     handleDelete,
+    addFiles,
   };
 }

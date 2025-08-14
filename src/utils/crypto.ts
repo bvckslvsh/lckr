@@ -83,26 +83,45 @@ async function loadLockerMetadata(
   }
 }
 
+const BLOCK_SIZE = 64 * 1024;
+
 async function encryptFile(
   file: File,
   key: CryptoKey,
   directoryHandle: FileSystemDirectoryHandle,
-  outputFileName: string
-): Promise<void> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const fileData = await file.arrayBuffer();
-  const encryptedData = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    fileData
-  );
+  outputFileName: string,
+  onProgress?: (percent: number) => void
+) {
+  const reader = file.stream().getReader();
   const encryptedFileHandle = await directoryHandle.getFileHandle(
     outputFileName,
     { create: true }
   );
   const writable = await encryptedFileHandle.createWritable();
-  const encryptedBlob = new Blob([iv, new Uint8Array(encryptedData)]);
-  await writable.write(encryptedBlob);
+
+  let processed = 0;
+  const totalSize = file.size;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    for (let offset = 0; offset < value.length; offset += BLOCK_SIZE) {
+      const chunk = value.subarray(offset, offset + BLOCK_SIZE);
+
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+
+      const encryptedChunk = new Uint8Array(
+        await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, chunk)
+      );
+
+      await writable.write(new Blob([iv.buffer, encryptedChunk]));
+
+      processed += chunk.length;
+      if (onProgress) onProgress(Math.round((processed / totalSize) * 100));
+    }
+  }
+
   await writable.close();
 }
 
@@ -112,14 +131,26 @@ async function decryptFile(
 ): Promise<Blob> {
   const file = await encryptedFileHandle.getFile();
   const arrayBuffer = await file.arrayBuffer();
-  const iv = new Uint8Array(arrayBuffer.slice(0, 12));
-  const encryptedData = arrayBuffer.slice(12);
-  const decryptedData = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
-    key,
-    encryptedData
-  );
-  return new Blob([decryptedData]);
+  const decryptedChunks: ArrayBuffer[] = [];
+
+  let offset = 0;
+  while (offset < arrayBuffer.byteLength) {
+    const iv = new Uint8Array(arrayBuffer.slice(offset, offset + 12));
+    offset += 12;
+
+    const end = Math.min(offset + 64 * 1024 + 16, arrayBuffer.byteLength);
+    const encryptedChunk = arrayBuffer.slice(offset, end);
+    offset = end;
+
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      encryptedChunk
+    );
+    decryptedChunks.push(decrypted as ArrayBuffer);
+  }
+
+  return new Blob(decryptedChunks);
 }
 
 async function encryptAllFiles(

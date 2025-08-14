@@ -33,6 +33,9 @@ interface LockerState {
   ) => void;
 
   clearLocker: () => void;
+
+  fileProgress: Record<string, number | undefined>;
+  setFileProgress: (fileName: string, progress: number | undefined) => void;
 }
 
 export const useLockerStore = create<LockerState>((set, get) => ({
@@ -128,4 +131,9 @@ export const useLockerStore = create<LockerState>((set, get) => ({
       isLockerInitialized: false,
       lockerFiles: [],
     }),
+  fileProgress: {},
+  setFileProgress: (fileName, progress) =>
+    set((state) => ({
+      fileProgress: { ...state.fileProgress, [fileName]: progress },
+    })),
 }));
