@@ -6,7 +6,10 @@ import logo from "@/assets/logo.png";
 import { validatePassword } from "@/utils/password";
 import { useLockerStore } from "@/store/lockerStore";
 import { useLockerActions } from "@/hooks/useLockerActions";
+import { Github } from "lucide-react";
 import CreateLockerWarningDialog from "@/components/lockerSetup/CreateLockerWarningDialog";
+import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 
 export const LockerMode = {
   Select: "select",
@@ -19,6 +22,7 @@ export default function LockerSetup() {
     (typeof LockerMode)[keyof typeof LockerMode]
   >(LockerMode.Select);
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,84 +75,115 @@ export default function LockerSetup() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full mx-auto p-6 bg-gray-100 rounded-lg">
-        <img src={logo} alt="Logo" className="w-32 h-32 mx-auto" />
-
-        <div className="flex flex-row align-center justify-center gap-4 mt-4">
-          {mode === LockerMode.Select && (
-            <>
-              <Button
-                onClick={() => setMode(LockerMode.Open)}
-                disabled={isLockerInitialized}
-              >
-                Open existing locker
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setMode(LockerMode.Create)}
-                disabled={isLockerInitialized}
-              >
-                Create new locker
-              </Button>
-            </>
-          )}
-
-          {mode !== LockerMode.Select && (
-            <div className="w-full flex flex-col gap-1">
-              <Input
-                type="password"
-                placeholder={
-                  mode === LockerMode.Open
-                    ? "Enter master password"
-                    : "Create master password"
-                }
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && password && !loading) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleAction();
-                  }
-                }}
-                className={cn(
-                  error && "border-red-500 focus-visible:ring-red-500"
-                )}
-              />
-
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-            </div>
-          )}
-
-          {mode !== LockerMode.Select && (
-            <Button disabled={!password || loading} onClick={handleAction}>
-              {loading
-                ? "Processing..."
-                : mode === LockerMode.Open
-                ? "Open"
-                : "Create"}
-            </Button>
-          )}
-
-          {mode !== LockerMode.Select && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setMode(LockerMode.Select);
-                setError("");
-                setPassword("");
-                setWarning("");
-              }}
-            >
-              Back
-            </Button>
-          )}
-        </div>
-
-        {warning && (
-          <p className="text-yellow-800 text-sm mt-2 text-center">{warning}</p>
-        )}
+      <div className="absolute top-4 right-4 z-50 flex flex-row align-bottom gap-2">
+        <a
+          href="https://github.com/bvckslvsh/lckr"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button size="icon">
+            <Github className="w-5 h-5" />
+          </Button>
+        </a>
       </div>
+
+      <Button
+        onClick={() => navigate("/")}
+        className="absolute top-4 left-4 z-50"
+      >
+        ← Return
+      </Button>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="locker-setup"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.2 }}
+          className="max-w-md w-full mx-auto p-6 bg-gray-100 rounded-lg"
+        >
+          <div className="max-w-md w-full p-6 bg-gray-100 rounded-lg">
+            <img src={logo} alt="Logo" className="w-32 h-32 mx-auto" />
+
+            <div className="flex flex-row align-center justify-center gap-4 mt-4">
+              {mode === LockerMode.Select && (
+                <>
+                  <Button
+                    onClick={() => setMode(LockerMode.Open)}
+                    disabled={isLockerInitialized}
+                  >
+                    Open existing locker
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setMode(LockerMode.Create)}
+                    disabled={isLockerInitialized}
+                  >
+                    Create new locker
+                  </Button>
+                </>
+              )}
+
+              {mode !== LockerMode.Select && (
+                <div className="w-full flex flex-col gap-1">
+                  <Input
+                    type="password"
+                    placeholder={
+                      mode === LockerMode.Open
+                        ? "Enter master password"
+                        : "Create master password"
+                    }
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && password && !loading) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAction();
+                      }
+                    }}
+                    className={cn(
+                      error && "border-red-500 focus-visible:ring-red-500"
+                    )}
+                  />
+
+                  {error && <p className="text-red-500 text-sm">{error}</p>}
+                </div>
+              )}
+
+              {mode !== LockerMode.Select && (
+                <Button disabled={!password || loading} onClick={handleAction}>
+                  {loading
+                    ? "Processing..."
+                    : mode === LockerMode.Open
+                    ? "Open"
+                    : "Create"}
+                </Button>
+              )}
+
+              {mode !== LockerMode.Select && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setMode(LockerMode.Select);
+                    setError("");
+                    setPassword("");
+                    setWarning("");
+                  }}
+                >
+                  Back
+                </Button>
+              )}
+            </div>
+
+            {warning && (
+              <p className="text-yellow-800 text-sm mt-2 text-center">
+                {warning}
+              </p>
+            )}
+          </div>
+        </motion.div>
+      </AnimatePresence>
 
       <CreateLockerWarningDialog
         isOpen={isWarningDialogOpen}

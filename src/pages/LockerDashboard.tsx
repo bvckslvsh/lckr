@@ -15,6 +15,7 @@ export default function LockerDashboard() {
     filteredLockerFiles,
     lockerFiles,
     setFilters,
+    fileProgress,
   } = useLockerStore();
 
   const {
@@ -78,6 +79,7 @@ export default function LockerDashboard() {
                       onDownload={() => handleDownload(file)}
                       onEncrypt={() => handleEncrypt(file)}
                       onDecrypt={() => handleDecrypt(file)}
+                      progress={fileProgress[file.name]}
                       onDelete={() => {
                         setFileToDelete(file);
                         setIsDialogOpen(true);
