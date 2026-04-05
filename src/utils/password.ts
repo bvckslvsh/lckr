@@ -17,8 +17,8 @@ export function validatePassword(
   if (requireStrong && !isPasswordStrong(password)) {
     return {
       valid: false,
-      warning:
-        "Your password is weak. Use at least 8 characters, letters, numbers, and special symbols.",
+      error:
+        "Weak password. Use at least 8 characters, letters, numbers, and special symbols.",
     };
   }
   return { valid: true };

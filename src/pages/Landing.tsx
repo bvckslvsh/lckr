@@ -10,26 +10,20 @@ export default function Landing() {
   const [view, setView] = useState<"hero" | "howitworks" | "notes">("hero");
 
   return (
-    <div className="relative min-h-screen bg-gray-100 px-4">
-      <div className="absolute top-4 right-4 z-50 flex flex-row align-bottom gap-2">
-        <a
-          href="https://github.com/bvckslvsh/lckr"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Button size="icon">
-            <Github className="w-5 h-5" />
-          </Button>
-        </a>
-      </div>
-
-      {view !== "hero" && (
-        <Button
-          onClick={() => setView("hero")}
-          className="absolute top-4 left-4 z-50"
-        >
-          ← Return
-        </Button>
+    <div className="relative min-h-screen bg-gray-100">
+      {/* GitHub button — only on hero */}
+      {view === "hero" && (
+        <div className="absolute top-4 right-4 z-50">
+          <a
+            href="https://github.com/bvckslvsh/lckr"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button size="icon">
+              <Github className="w-5 h-5" />
+            </Button>
+          </a>
+        </div>
       )}
 
       <AnimatePresence mode="wait">
@@ -56,7 +50,7 @@ export default function Landing() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
           >
-            <HowItWorks />
+            <HowItWorks onReturn={() => setView("hero")} />
           </motion.div>
         )}
 
@@ -68,7 +62,7 @@ export default function Landing() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
           >
-            <Notes />
+            <Notes onReturn={() => setView("hero")} />
           </motion.div>
         )}
       </AnimatePresence>

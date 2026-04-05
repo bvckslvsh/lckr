@@ -73,7 +73,7 @@ export function useLockerActions() {
 
     const salt = new Uint8Array(base64ToBuffer(lockerMetadata.salt));
 
-    const key = await deriveKey(password, salt);
+    const key = await deriveKey(password, salt, lockerMetadata.iterations);
 
     const isValid = await verifyKey(handle, key);
 
