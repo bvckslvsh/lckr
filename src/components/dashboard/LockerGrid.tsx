@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   DndContext,
-  DragEndEvent,
-  DragOverEvent,
-  DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
   rectIntersection,
   PointerSensor,
   useSensor,
@@ -174,11 +174,11 @@ export default function LockerGrid({
           gid,
           { ...g, files: g.files.filter((f) => fileNames.has(f)) },
         ])
-        .filter(([, g]) => g.files.length >= 2)
+        .filter(([, g]) => (g as { files: string[] }).files.length >= 2)
     );
     const validGroupIds = new Set(Object.keys(newGroups));
     const filesInGroups = new Set(
-      Object.values(newGroups).flatMap((g) => g.files)
+      Object.values(newGroups).flatMap((g) => (g as { files: string[] }).files)
     );
 
     // Clean slots: keep if valid file (not in group) or valid group
