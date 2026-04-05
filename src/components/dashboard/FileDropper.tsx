@@ -3,6 +3,7 @@ import { useLockerStore } from "@/store/lockerStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLockerActions } from "@/hooks/useLockerActions";
 import { useNotification } from "@/notifications/NotificationProvider";
+import { Upload } from "lucide-react";
 
 export default function FileDropper() {
   const { cryptoKey, directoryHandle } = useLockerStore();
@@ -19,10 +20,7 @@ export default function FileDropper() {
       }
     };
     const onDragLeave = (e: DragEvent) => {
-      if (
-        e.relatedTarget === null ||
-        !(dropRef.current && dropRef.current.contains(e.relatedTarget as Node))
-      ) {
+      if (e.relatedTarget === null) {
         setIsDragging(false);
       }
     };
@@ -51,7 +49,6 @@ export default function FileDropper() {
       for (const item of e.dataTransfer.items) {
         const entry = item.webkitGetAsEntry?.();
         if (!entry) continue;
-
         if (entry.isFile) {
           const file = item.getAsFile();
           if (file) files.push(file);
@@ -65,7 +62,6 @@ export default function FileDropper() {
       }
 
       if (files.length === 0) return;
-
       await addFiles(files);
     },
     [cryptoKey, directoryHandle, addFiles, notify]
@@ -75,24 +71,28 @@ export default function FileDropper() {
     <AnimatePresence>
       {isDragging && (
         <motion.div
+          ref={dropRef}
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
-          style={{ backdropFilter: "blur(4px)" }}
+          transition={{ duration: 0.12 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-blue-600/8 backdrop-blur-[2px]"
         >
-          <div
-            ref={dropRef}
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            className="border-2 border-dashed border-black bg-white/80 rounded-xl p-12 flex flex-col items-center justify-center shadow-xl"
-            style={{ minWidth: 340, minHeight: 180 }}
-          >
-            <span className="text-2xl font-semibold mb-2">Drop Here!</span>
-            <span className="text-gray-500 text-sm">
-              Files will be encrypted and added
-            </span>
+          {/* Visual hint — pointer-events-none so drop fires on parent */}
+          <div className="pointer-events-none flex flex-col items-center gap-4 bg-white/90 border-2 border-dashed border-blue-400 rounded-2xl px-20 py-14 shadow-xl">
+            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center">
+              <Upload size={24} className="text-blue-600" />
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold text-gray-900">
+                Drop files anywhere
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Files will be encrypted and added to your locker
+              </p>
+            </div>
           </div>
         </motion.div>
       )}

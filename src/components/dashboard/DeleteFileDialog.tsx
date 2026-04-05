@@ -31,8 +31,10 @@ export default function DeleteFileDialog({
             {fileName
               ? `Are you sure you want to delete "${fileName}"?`
               : "Are you sure you want to delete this file?"}{" "}
-            This action cannot be undone. The file will be permanently removed
-            from your locker.
+            This action cannot be undone. The file will be removed from your
+            locker using standard OS deletion — it is not cryptographically
+            wiped. For highly sensitive data, consider encrypting before
+            deleting.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
