@@ -69,7 +69,7 @@ const usbSteps: Step[] = [
       "Download the latest release from GitHub. The zip contains the app and launcher scripts for Windows and Mac/Linux.",
     action: {
       label: "Download latest release",
-      href: "https://github.com/bvckslvsh/lckr/releases",
+      href: "https://github.com/bvckslvsh/lckr/releases/latest",
     },
   },
   {
