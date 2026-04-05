@@ -2,24 +2,16 @@ import {
   ArrowDownToLine,
   FileArchive,
   FileImage,
-  FileVideoCamera,
-  LetterText,
+  FileVideo,
+  FileText,
   Loader,
   Lock,
   LockOpen,
-  Trash,
+  Trash2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import {
-  Card,
-  CardTitle,
-  CardHeader,
-  CardAction,
-  CardFooter,
-} from "../ui/card";
-import { Badge } from "../ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { Progress } from "../ui/progress";
+
 type FileCardProps = {
   title: string;
   type: string;
@@ -31,15 +23,22 @@ type FileCardProps = {
   onDecrypt?: () => void;
   onDelete?: () => void;
 };
-function getIconByExtension(ext: string): LucideIcon {
-  const extension = ext.toLowerCase();
-  if (["txt", "md", "doc", "docx"].includes(extension)) return LetterText;
-  if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension))
-    return FileImage;
-  if (["mp4", "mov", "avi", "mkv"].includes(extension)) return FileVideoCamera;
-  if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) return FileArchive;
-  return LetterText;
+
+type IconMeta = { icon: LucideIcon; bg: string; color: string };
+
+function getIconMeta(ext: string): IconMeta {
+  const e = ext.toLowerCase();
+  if (["txt", "md", "doc", "docx", "pdf"].includes(e))
+    return { icon: FileText, bg: "bg-blue-50", color: "text-blue-500" };
+  if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(e))
+    return { icon: FileImage, bg: "bg-green-50", color: "text-green-500" };
+  if (["mp4", "mov", "avi", "mkv", "webm"].includes(e))
+    return { icon: FileVideo, bg: "bg-purple-50", color: "text-purple-500" };
+  if (["zip", "rar", "7z", "tar", "gz"].includes(e))
+    return { icon: FileArchive, bg: "bg-orange-50", color: "text-orange-500" };
+  return { icon: FileText, bg: "bg-gray-100", color: "text-gray-400" };
 }
+
 export default function FileCard({
   title,
   type,
@@ -51,76 +50,89 @@ export default function FileCard({
   onDelete,
   progress,
 }: FileCardProps) {
-  const FileIcon = getIconByExtension(type);
+  const { icon: FileIcon, bg, color } = getIconMeta(type);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
-          <FileIcon className="w-5 h-5 text-muted-foreground shrink-0" />
-          <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+    <div className="bg-white rounded-xl border border-gray-200 p-4 xl:p-5 flex flex-col gap-3 xl:gap-4 hover:border-gray-300 transition-colors">
+      {/* Top row: icon + name */}
+      <div className="flex items-start gap-3">
+        <div
+          className={`w-9 h-9 xl:w-11 xl:h-11 rounded-lg xl:rounded-xl ${bg} flex items-center justify-center shrink-0`}
+        >
+          <FileIcon size={16} className={`${color} xl:w-5 xl:h-5`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-sm xl:text-base font-medium text-gray-900 truncate"
+            title={title}
+          >
             {title}
+          </p>
+          <p className="text-xs xl:text-sm text-gray-400 mt-0.5 uppercase tracking-wide">
+            {type}
+          </p>
+        </div>
+      </div>
+
+      {/* Progress bar (during upload) */}
+      {progress !== undefined && (
+        <Progress value={progress} className="h-1.5" />
+      )}
+
+      {/* Bottom row: status badge + actions */}
+      {progress === undefined && (
+        <div className="flex items-center justify-between">
+          <span
+            className={`inline-flex items-center text-xs xl:text-sm font-medium px-2 xl:px-2.5 py-0.5 rounded-full ${
+              isEncrypted
+                ? "bg-green-50 text-green-700"
+                : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {isEncrypted ? "Encrypted" : "Decrypted"}
           </span>
-        </CardTitle>
-        {progress === undefined ? (
-          <CardAction className="flex gap-2">
-            <Tooltip>
-              <TooltipTrigger>
-                <ArrowDownToLine
-                  onClick={onDownload}
-                  className="cursor-pointer"
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Get file</p>
-              </TooltipContent>
-            </Tooltip>
+
+          <div className="flex items-center gap-3 xl:gap-4 text-gray-400">
             {isLoading ? (
-              <Loader className="animate-spin text-muted-foreground" />
+              <Loader size={15} className="animate-spin xl:w-4 xl:h-4" />
             ) : (
               <>
+                <button
+                  onClick={onDownload}
+                  className="hover:text-gray-700 transition-colors"
+                  title="Download"
+                >
+                  <ArrowDownToLine size={15} className="xl:w-4 xl:h-4" />
+                </button>
                 {isEncrypted ? (
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <LockOpen
-                        onClick={onDecrypt}
-                        className="cursor-pointer"
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Decrypt file</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    onClick={onDecrypt}
+                    className="hover:text-blue-600 transition-colors"
+                    title="Decrypt"
+                  >
+                    <LockOpen size={15} className="xl:w-4 xl:h-4" />
+                  </button>
                 ) : (
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Lock onClick={onEncrypt} className="cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Encrypt file</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    onClick={onEncrypt}
+                    className="hover:text-blue-600 transition-colors"
+                    title="Encrypt"
+                  >
+                    <Lock size={15} className="xl:w-4 xl:h-4" />
+                  </button>
                 )}
+                <button
+                  onClick={onDelete}
+                  className="hover:text-red-500 transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 size={15} className="xl:w-4 xl:h-4" />
+                </button>
               </>
             )}
-            <Tooltip>
-              <TooltipTrigger>
-                <Trash onClick={onDelete} className="cursor-pointer" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete file</p>
-              </TooltipContent>
-            </Tooltip>
-          </CardAction>
-        ) : (
-          <Progress value={progress} className="w-full" />
-        )}
-      </CardHeader>
-      <CardFooter className="flex gap-1">
-        <Badge variant={isEncrypted ? "accept" : "destructive"}>
-          {isEncrypted ? "Encrypted" : "Decrypted"}
-        </Badge>
-        <Badge variant={"secondary"}>{type}</Badge>
-      </CardFooter>
-    </Card>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

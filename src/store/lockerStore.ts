@@ -67,6 +67,7 @@ export const useLockerStore = create<LockerState>((set, get) => ({
       if (
         entry.kind === "file" &&
         entry.name !== "locker.metadata.json" &&
+        entry.name !== "locker.layout.json" &&
         entry.name !== ".DS_Store" &&
         entry.name !== "test.encrypted"
       ) {

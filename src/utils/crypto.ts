@@ -18,7 +18,8 @@ async function generateSalt(): Promise<Uint8Array> {
 
 async function deriveKey(
   password: string,
-  salt: Uint8Array
+  salt: Uint8Array,
+  iterations = 600000
 ): Promise<CryptoKey> {
   const passwordBuffer = new TextEncoder().encode(password);
   const keyMaterial = await crypto.subtle.importKey(
@@ -32,7 +33,7 @@ async function deriveKey(
     {
       name: "PBKDF2",
       salt: new Uint8Array(salt),
-      iterations: 100000,
+      iterations,
       hash: "SHA-256",
     },
     keyMaterial,
@@ -45,7 +46,7 @@ async function deriveKey(
 async function saveLockerMetadata(
   directoryHandle: FileSystemDirectoryHandle,
   salt: Uint8Array,
-  iterations = 100000,
+  iterations = 600000,
   hash = "SHA-256",
   encryption = { algorithm: "AES-GCM", keyLength: 256, ivLength: 12 }
 ) {
