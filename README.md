@@ -1,77 +1,115 @@
-**LCKR** is a zero-knowledge, client-side encryption tool designed to securely encrypt and store your files locally using modern web technologies. It ensures your data privacy by performing all cryptographic operations on the client side — no data ever leaves your device.
+# [LCKR](https://lckr.tech)
+
+**Your files. Encrypted. No cloud. No accounts. No trace.**
+
+LCKR is a private file locker that runs entirely in your browser. You pick a folder, set a password, and drop files in — they get encrypted instantly on your device. Nobody else can read them. Not us, not anyone.
 
 ---
 
-## Why LCKR?
+## What it does
 
-Many journalists, activists, or anyone handling sensitive information — need strong encryption for their files. But not everyone has the time, technical skills, or patience to set up complex software like Veracrypt. That’s where **LCKR** comes in.
-
-Unlike many alternatives:
-
-- **Smart Lockers** – Create a folder (locker) with associated metadata that tells LCKR how to handle encryption. Once a locker is set up, you can simply **drag and drop new files** into the app, and they are automatically encrypted according to the locker’s configuration. This avoids the need to manually encrypt each file and keeps your workflow smooth.
-- **Local AES-GCM encryption** – All encryption is performed locally using AES-GCM; your files **never** leave your device.
-- **Sleek, modern UI** – simple and intuitive, no steep learning curve.
-- **Fast & lightweight** – works right in your browser without heavy installations.
-
-**Who is it for?**
-
-- Journalists and researchers who handle sensitive files on the go.
-- Everyday users who want strong encryption but don’t want to wrestle with technical setups.
-- Anyone who values privacy but prefers simplicity and speed.
-
-**Why LCKR?**  
-It’s designed to make encryption **accessible, fast, and reliable** for non-technical users—without compromising security.
+- **Encrypts your files with a password** — drag files into LCKR and they're locked with military-grade encryption before anything is written to disk.
+- **Works offline** — no internet connection required after the first load. Everything happens locally.
+- **No accounts, no cloud** — LCKR never sees your files or your password. There are no servers involved.
+- **Works from a USB drive** — carry LCKR on a USB stick along with your encrypted files. Open them on any PC with Chrome, Edge, or Brave. Unplug and nothing stays behind.
+- **Works with cloud sync** — put your locker folder inside Dropbox, iCloud, or Google Drive. Your files sync encrypted. The cloud provider only sees `.enc` files.
 
 ---
 
-## Stack
+## Who it's for
 
-- React 19
-- TypeScript
+- **Journalists and researchers** who carry sensitive material and need it locked at all times.
+- **Everyday users** who want their personal files protected without learning complicated software.
+- **People on the move** who need encryption that works on any computer — without installing anything.
+
+---
+
+## How to use
+
+### In the browser
+
+1. Go to [lckr.tech](https://lckr.tech)
+2. Click **Create locker** and pick an empty folder on your computer
+3. Set a strong password
+4. Drag files into LCKR — they encrypt automatically
+5. To open later: click **Open locker**, pick the same folder, enter your password
+
+### From a USB drive
+
+1. Download the latest release from the [Releases page](https://github.com/bvckslvsh/lckr/releases/latest)
+2. Unzip onto your USB drive
+3. Create a folder on the USB for your locker (e.g. `my-locker/`)
+4. On any PC: run `start.bat` (Windows) or `start.sh` (Mac/Linux) — Chrome opens automatically
+5. Open your locker, work with your files, close the tab when done
+
+> Python must be installed to run the local server. Download free at [python.org](https://python.org).
+
+---
+
+## Security
+
+All encryption happens in your browser using:
+
+- **AES-256-GCM** — the same standard used by governments and banks
+- **PBKDF2 with 600,000 iterations** — makes brute-forcing your password extremely slow even with powerful hardware
+- **SHA-256** key derivation
+
+Your password is never stored anywhere. The encryption key exists only in memory while the locker is open — closing the tab destroys it.
+
+> **Your password is your only key.** If you forget it, your files cannot be recovered. There is no reset.
+
+---
+
+## Frequently asked questions
+
+**Can LCKR read my files?**
+No. Encryption happens entirely on your device. We have no servers that receive your data.
+
+**What if I forget my password?**
+There is no recovery option by design. Choose a password you won't forget, or store it in a password manager.
+
+**Can I use the same locker on multiple devices?**
+Yes — put your locker folder in a cloud-synced location (Dropbox, iCloud, Google Drive) and open it with LCKR on any device.
+
+**What browsers are supported?**
+Chrome, Edge, and Brave. Firefox does not yet support the File System Access API that LCKR relies on.
+
+**Is it free?**
+Yes, completely. No plans, no limits, no ads.
+
+---
+
+## For developers
+
+### Stack
+
+- React 19 + TypeScript
 - Vite
 - Zustand
-- Tailwind CSS
+- Tailwind CSS v4
 - Framer Motion
-- Lucide React
+- dnd-kit (drag and drop)
+- Vitest (tests)
 
----
-
-## Installation
-
-Make sure you have Node.js (>=18) and npm/yarn installed.
+### Running locally
 
 ```bash
-# Clone the repo
 git clone https://github.com/bvckslvsh/lckr.git
 cd lckr
-
-# Install dependencies
 npm install
-# or
-yarn install
+npm run dev
 ```
 
----
+### Running tests
 
-## Branch Rules
+```bash
+npm run test:run   # run once
+npm test           # watch mode
+```
 
-- `main` :
+### Branch rules
 
-  - Production-ready code only
-  - All features merged via Pull Requests
-
-- `dev`:
-
-  - Integration branch for ongoing development
-  - Features branches merge here for testing and review
-
-- Feature branches:
-
-  - Branch from `dev`
-  - Use descriptive names, e.g., `feature/encryption-ui`, `feature/file-download`
-  - Create pull requests back to `dev` when ready
-
-- Hotfix branches:
-  - Branch from `main`
-  - For urgent bug fixes on production
-  - Merge back to both `main` and `dev`
+- `main` — production-ready code only, merged via Pull Requests
+- `dev` — integration branch for ongoing development
+- `feature/*` — branch from `dev`, PR back to `dev` when ready
+- `hotfix/*` — branch from `main`, merge back to both `main` and `dev`

@@ -7,8 +7,10 @@ import {
   encryptFile,
   generateSalt,
   loadLockerMetadata,
+  metadataToCryptoParams,
   saveLockerMetadata,
   verifyKey,
+  DEFAULT_CRYPTO_PARAMS,
 } from "@/utils/crypto";
 import { useLockerStore, type LockerFile } from "@/store/lockerStore";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +23,7 @@ export function useLockerActions() {
   const { notify } = useNotification();
   const {
     cryptoKey,
+    cryptoParams,
     directoryHandle,
     loadFiles,
     setFileProgress,
@@ -50,14 +53,15 @@ export function useLockerActions() {
       }
     }
 
+    const params = DEFAULT_CRYPTO_PARAMS;
     const salt = await generateSalt();
-    const key = await deriveKey(password, salt);
+    const key = await deriveKey(password, salt, 600000, params.hash, params.keyLength);
 
-    await saveLockerMetadata(handle, salt);
-    await createTestFile(handle, key);
-    await encryptAllFiles(handle, key);
+    await saveLockerMetadata(handle, salt, 600000, params);
+    await createTestFile(handle, key, params);
+    await encryptAllFiles(handle, key, params);
 
-    setLocker(key, salt, handle);
+    setLocker(key, salt, handle, params);
     navigate("/dashboard");
     notify("Created!", "New locker created successfully.", "success");
   };
@@ -71,27 +75,27 @@ export function useLockerActions() {
       throw new Error("Locker metadata not found");
     }
 
+    const params = metadataToCryptoParams(lockerMetadata);
     const salt = new Uint8Array(base64ToBuffer(lockerMetadata.salt));
+    const key = await deriveKey(password, salt, lockerMetadata.iterations, params.hash, params.keyLength);
 
-    const key = await deriveKey(password, salt, lockerMetadata.iterations);
-
-    const isValid = await verifyKey(handle, key);
+    const isValid = await verifyKey(handle, key, params);
 
     if (!isValid) {
       notify("Oops!", "Invalid password or locker corrupted.", "error");
       throw new Error("Invalid password or locker corrupted.");
     }
 
-    setLocker(key, salt, handle);
+    setLocker(key, salt, handle, params);
     navigate("/dashboard");
     notify("Opened!", "Locker opened successfully.", "success");
   };
 
   const handleDownload = async (file: LockerFile) => {
-    if (!cryptoKey || !directoryHandle) return;
+    if (!cryptoKey || !directoryHandle || !cryptoParams) return;
     const fileHandle = await directoryHandle.getFileHandle(file.name);
     const blob = file.isEncrypted
-      ? await decryptFile(fileHandle, cryptoKey)
+      ? await decryptFile(fileHandle, cryptoKey, cryptoParams)
       : await fileHandle.getFile();
 
     const url = URL.createObjectURL(blob);
@@ -103,17 +107,12 @@ export function useLockerActions() {
   };
 
   const handleEncrypt = async (file: LockerFile) => {
-    if (!cryptoKey || !directoryHandle) return;
+    if (!cryptoKey || !directoryHandle || !cryptoParams) return;
     setLoadingFileName(file.name);
     try {
       const fileHandle = await directoryHandle.getFileHandle(file.name);
       const fileData = await fileHandle.getFile();
-      await encryptFile(
-        fileData,
-        cryptoKey,
-        directoryHandle,
-        `${file.name}.enc`
-      );
+      await encryptFile(fileData, cryptoKey, directoryHandle, `${file.name}.enc`, cryptoParams);
       await directoryHandle.removeEntry(file.name);
       await loadFiles();
       notify("Encrypted!", "File encrypted successfully.", "success");
@@ -123,11 +122,11 @@ export function useLockerActions() {
   };
 
   const handleDecrypt = async (file: LockerFile) => {
-    if (!cryptoKey || !directoryHandle) return;
+    if (!cryptoKey || !directoryHandle || !cryptoParams) return;
     setLoadingFileName(file.name);
     try {
       const fileHandle = await directoryHandle.getFileHandle(file.name);
-      const decryptedBlob = await decryptFile(fileHandle, cryptoKey);
+      const decryptedBlob = await decryptFile(fileHandle, cryptoKey, cryptoParams);
 
       const newFileHandle = await directoryHandle.getFileHandle(
         file.originalName,
@@ -159,7 +158,7 @@ export function useLockerActions() {
   };
 
   const addFiles = async (files: File[]) => {
-    if (!cryptoKey || !directoryHandle) return;
+    if (!cryptoKey || !directoryHandle || !cryptoParams) return;
 
     const tempFiles: { file: File; lockerFile: LockerFile }[] = files.map(
       (file) => ({
@@ -180,7 +179,6 @@ export function useLockerActions() {
     );
 
     setLockerFiles([...lockerFiles, ...tempFiles.map((t) => t.lockerFile)]);
-
     tempFiles.forEach((t) => setFileProgress(t.file.name, 0));
 
     for (const t of tempFiles) {
@@ -189,6 +187,7 @@ export function useLockerActions() {
         cryptoKey,
         directoryHandle,
         `${t.file.name}.enc`,
+        cryptoParams,
         (p) => setFileProgress(t.file.name, p)
       );
       setFileProgress(t.file.name, undefined);
