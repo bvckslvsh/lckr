@@ -125,7 +125,8 @@ describe("lockerStore", () => {
     useLockerStore.getState().setLocker(
       {} as CryptoKey,
       new Uint8Array(16),
-      {} as FileSystemDirectoryHandle
+      {} as FileSystemDirectoryHandle,
+      { algorithm: "AES-GCM", keyLength: 256, ivLength: 12, hash: "SHA-256", blockSize: 65536 }
     );
     expect(useLockerStore.getState().isLockerInitialized).toBe(true);
 

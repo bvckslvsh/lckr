@@ -1,5 +1,21 @@
 import { bufferToBase64, base64ToBuffer } from "./bufferUtils";
 
+export type CryptoParams = {
+  algorithm: string;
+  keyLength: number;
+  ivLength: number;
+  hash: string;
+  blockSize: number;
+};
+
+export const DEFAULT_CRYPTO_PARAMS: CryptoParams = {
+  algorithm: "AES-GCM",
+  keyLength: 256,
+  ivLength: 12,
+  hash: "SHA-256",
+  blockSize: 64 * 1024,
+};
+
 interface LockerMetadata {
   version: number;
   salt: string;
@@ -9,6 +25,17 @@ interface LockerMetadata {
     algorithm: string;
     keyLength: number;
     ivLength: number;
+    blockSize?: number;
+  };
+}
+
+export function metadataToCryptoParams(meta: LockerMetadata): CryptoParams {
+  return {
+    algorithm: meta.encryption.algorithm,
+    keyLength: meta.encryption.keyLength,
+    ivLength: meta.encryption.ivLength,
+    hash: meta.hash,
+    blockSize: meta.encryption.blockSize ?? DEFAULT_CRYPTO_PARAMS.blockSize,
   };
 }
 
@@ -19,7 +46,9 @@ async function generateSalt(): Promise<Uint8Array> {
 async function deriveKey(
   password: string,
   salt: Uint8Array,
-  iterations = 600000
+  iterations = 600000,
+  hash = "SHA-256",
+  keyLength = 256
 ): Promise<CryptoKey> {
   const passwordBuffer = new TextEncoder().encode(password);
   const keyMaterial = await crypto.subtle.importKey(
@@ -30,14 +59,9 @@ async function deriveKey(
     ["deriveBits", "deriveKey"]
   );
   return crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: new Uint8Array(salt),
-      iterations,
-      hash: "SHA-256",
-    },
+    { name: "PBKDF2", salt: new Uint8Array(salt), iterations, hash },
     keyMaterial,
-    { name: "AES-GCM", length: 256 },
+    { name: "AES-GCM", length: keyLength },
     false,
     ["encrypt", "decrypt"]
   );
@@ -46,9 +70,8 @@ async function deriveKey(
 async function saveLockerMetadata(
   directoryHandle: FileSystemDirectoryHandle,
   salt: Uint8Array,
-  iterations = 600000,
-  hash = "SHA-256",
-  encryption = { algorithm: "AES-GCM", keyLength: 256, ivLength: 12 }
+  iterations = DEFAULT_CRYPTO_PARAMS.blockSize,
+  params: CryptoParams = DEFAULT_CRYPTO_PARAMS
 ) {
   const fileHandle = await directoryHandle.getFileHandle(
     "locker.metadata.json",
@@ -60,8 +83,13 @@ async function saveLockerMetadata(
     version: 1,
     salt: bufferToBase64(salt),
     iterations,
-    hash,
-    encryption,
+    hash: params.hash,
+    encryption: {
+      algorithm: params.algorithm,
+      keyLength: params.keyLength,
+      ivLength: params.ivLength,
+      blockSize: params.blockSize,
+    },
   };
 
   await writable.write(JSON.stringify(metadata, null, 2));
@@ -84,13 +112,12 @@ async function loadLockerMetadata(
   }
 }
 
-const BLOCK_SIZE = 64 * 1024;
-
 async function encryptFile(
   file: File,
   key: CryptoKey,
   directoryHandle: FileSystemDirectoryHandle,
   outputFileName: string,
+  params: CryptoParams = DEFAULT_CRYPTO_PARAMS,
   onProgress?: (percent: number) => void
 ) {
   const reader = file.stream().getReader();
@@ -107,13 +134,12 @@ async function encryptFile(
     const { done, value } = await reader.read();
     if (done) break;
 
-    for (let offset = 0; offset < value.length; offset += BLOCK_SIZE) {
-      const chunk = value.subarray(offset, offset + BLOCK_SIZE);
-
-      const iv = crypto.getRandomValues(new Uint8Array(12));
+    for (let offset = 0; offset < value.length; offset += params.blockSize) {
+      const chunk = value.subarray(offset, offset + params.blockSize);
+      const iv = crypto.getRandomValues(new Uint8Array(params.ivLength));
 
       const encryptedChunk = new Uint8Array(
-        await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, chunk)
+        await crypto.subtle.encrypt({ name: params.algorithm, iv }, key, chunk)
       );
 
       await writable.write(new Blob([iv.buffer, encryptedChunk]));
@@ -128,23 +154,29 @@ async function encryptFile(
 
 async function decryptFile(
   encryptedFileHandle: FileSystemFileHandle,
-  key: CryptoKey
+  key: CryptoKey,
+  params: CryptoParams = DEFAULT_CRYPTO_PARAMS
 ): Promise<Blob> {
   const file = await encryptedFileHandle.getFile();
   const arrayBuffer = await file.arrayBuffer();
   const decryptedChunks: ArrayBuffer[] = [];
+  // GCM appends a 16-byte auth tag to every encrypted chunk
+  const GCM_TAG_SIZE = 16;
 
   let offset = 0;
   while (offset < arrayBuffer.byteLength) {
-    const iv = new Uint8Array(arrayBuffer.slice(offset, offset + 12));
-    offset += 12;
+    const iv = new Uint8Array(arrayBuffer.slice(offset, offset + params.ivLength));
+    offset += params.ivLength;
 
-    const end = Math.min(offset + 64 * 1024 + 16, arrayBuffer.byteLength);
+    const end = Math.min(
+      offset + params.blockSize + GCM_TAG_SIZE,
+      arrayBuffer.byteLength
+    );
     const encryptedChunk = arrayBuffer.slice(offset, end);
     offset = end;
 
     const decrypted = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv },
+      { name: params.algorithm, iv },
       key,
       encryptedChunk
     );
@@ -156,7 +188,8 @@ async function decryptFile(
 
 async function encryptAllFiles(
   directoryHandle: FileSystemDirectoryHandle,
-  key: CryptoKey
+  key: CryptoKey,
+  params: CryptoParams = DEFAULT_CRYPTO_PARAMS
 ) {
   // @ts-expect-error values() exists in browsers but not in TS types
   for await (const entry of directoryHandle.values()) {
@@ -167,7 +200,7 @@ async function encryptAllFiles(
       entry.name !== "test.encrypted"
     ) {
       const file = await entry.getFile();
-      await encryptFile(file, key, directoryHandle, `${file.name}.enc`);
+      await encryptFile(file, key, directoryHandle, `${file.name}.enc`, params);
       await directoryHandle.removeEntry(file.name);
     }
   }
@@ -175,23 +208,26 @@ async function encryptAllFiles(
 
 async function createTestFile(
   directoryHandle: FileSystemDirectoryHandle,
-  key: CryptoKey
+  key: CryptoKey,
+  params: CryptoParams = DEFAULT_CRYPTO_PARAMS
 ) {
   await encryptFile(
     new File(["LocalLockerTest"], "test.txt"),
     key,
     directoryHandle,
-    "test.encrypted"
+    "test.encrypted",
+    params
   );
 }
 
 async function verifyKey(
   directoryHandle: FileSystemDirectoryHandle,
-  key: CryptoKey
+  key: CryptoKey,
+  params: CryptoParams = DEFAULT_CRYPTO_PARAMS
 ): Promise<boolean> {
   try {
     const fileHandle = await directoryHandle.getFileHandle("test.encrypted");
-    const decryptedBlob = await decryptFile(fileHandle, key);
+    const decryptedBlob = await decryptFile(fileHandle, key, params);
     const text = await decryptedBlob.text();
     return text === "LocalLockerTest";
   } catch {
