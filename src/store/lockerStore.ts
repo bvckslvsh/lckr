@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { CryptoParams } from "@/utils/crypto";
 
 export type LockerFile = {
   name: string;
@@ -11,6 +12,7 @@ interface LockerState {
   cryptoKey: CryptoKey | null;
   salt: Uint8Array | null;
   directoryHandle: FileSystemDirectoryHandle | null;
+  cryptoParams: CryptoParams | null;
 
   isLockerInitialized: boolean;
   loadFiles: () => Promise<void>;
@@ -29,7 +31,8 @@ interface LockerState {
   setLocker: (
     key: CryptoKey,
     salt: Uint8Array,
-    directoryHandle: FileSystemDirectoryHandle
+    directoryHandle: FileSystemDirectoryHandle,
+    cryptoParams: CryptoParams
   ) => void;
 
   clearLocker: () => void;
@@ -42,6 +45,7 @@ export const useLockerStore = create<LockerState>((set, get) => ({
   cryptoKey: null,
   salt: null,
   directoryHandle: null,
+  cryptoParams: null,
   isLockerInitialized: false,
 
   lockerFiles: [],
@@ -116,11 +120,12 @@ export const useLockerStore = create<LockerState>((set, get) => ({
     });
   },
 
-  setLocker: (key, salt, directoryHandle) =>
+  setLocker: (key, salt, directoryHandle, cryptoParams) =>
     set({
       cryptoKey: key,
       salt,
       directoryHandle,
+      cryptoParams,
       isLockerInitialized: true,
     }),
 
@@ -129,6 +134,7 @@ export const useLockerStore = create<LockerState>((set, get) => ({
       cryptoKey: null,
       salt: null,
       directoryHandle: null,
+      cryptoParams: null,
       isLockerInitialized: false,
       lockerFiles: [],
     }),

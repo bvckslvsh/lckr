@@ -144,7 +144,7 @@ describe("encryptFile / decryptFile", () => {
     const { dir } = createMockDir();
     const progressValues: number[] = [];
 
-    await encryptFile(file, key, dir, "prog.txt.enc", (p) => progressValues.push(p));
+    await encryptFile(file, key, dir, "prog.txt.enc", undefined, (p) => progressValues.push(p));
 
     expect(progressValues.length).toBeGreaterThan(0);
     expect(progressValues[progressValues.length - 1]).toBe(100);
